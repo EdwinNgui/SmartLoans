@@ -1,0 +1,856 @@
+# %% [markdown]
+# ### Project: Loan Eligibility Prediction
+
+# %% [markdown]
+# - Use **[gender, education, income, credit history, property area]** to make a model to predict **[if a loan will be approved or denied]**
+# - Identify patterns in **key features**
+# - Predict **loan amount**
+# - Identify patterns in **the impact of credit history**
+# - Identify patterns in **demographic analysis**
+# - Identify patterns **between loan term and loan eligibility**
+# - Identify patterns in **the impact of property area**
+
+# %% [markdown]
+# #### NOTE: This notebook is for self-educational purposes to familarize myself with EDA and associated libraries
+# - Resource: https://www.kaggle.com/code/talhabu/mastering-loan-eligibility-analysis-advance-eda?scriptVersionId=126121065
+
+# %% [markdown]
+# ### Load Libraries
+
+# %%
+# Import foundational libraries
+import pandas as pd # Data manipulation
+import numpy as np # Numerical Operations
+import seaborn as sns # Statistical Data Visualization
+sns.set_theme(style="darkgrid")
+import sklearn
+import matplotlib.pyplot as plt # Makes Matplotlib works like MATLAB
+import matplotlib.patches as mpatches # Creates shapes
+
+# Import plotly (library) for data visualization
+import plotly.graph_objs as go # Creates Plotly graphs
+from plotly.tools import make_subplots # Creates subplots to combine plots into one figure
+from plotly.offline import iplot, init_notebook_mode # Dispalys plotly in Jupyter
+init_notebook_mode(connected = True)
+import plotly.express as px # Simplifies creating plotly graphs
+
+# Additional Imports
+from sklearn.impute import SimpleImputer # Handles missing values
+import warnings # Manages warnings
+warnings.filterwarnings("ignore")
+
+# Import statistical analysis library (scipy)
+from scipy import stats
+from scipy.stats import ttest_ind
+from scipy.stats import chi2_contingency
+import statsmodels.api as sm
+
+# Import algorithm libraries for data analysis
+from sklearn.feature_selection import RFE
+from sklearn.feature_selection import SelectKBest, f_classif
+from sklearn.preprocessing import LabelEncoder
+from sklearn.model_selection import train_test_split
+from sklearn.linear_model import LogisticRegression
+from sklearn.svm import SVC
+from sklearn.tree import DecisionTreeClassifier
+from sklearn.ensemble import ExtraTreesClassifier, RandomForestClassifier
+from sklearn.neighbors import KNeighborsClassifier
+from sklearn.metrics import accuracy_score, precision_score, recall_score, f1_score
+
+#Algorithms for handling Imbalance Data
+from imblearn.over_sampling import SMOTE, ADASYN
+
+# Version Check
+print(pd.__version__)
+print(np.__version__)
+print(sklearn.__version__)
+print(sns.__version__)
+print(plt.matplotlib.__version__)
+# print(plotly.__version__) # Only module is used, not full library
+# print(stats.__version__) # Has no attribute for version
+print(sm.__version__)
+# print(imblearn.__version__) # Only module is used, not full library
+
+# %% [markdown]
+# ### Prepare Dataset
+
+# %%
+# Import the csv data
+train = pd.read_csv('../data/raw/loan-train.csv')
+test = pd.read_csv('../data/raw/loan-test.csv')
+data = train.copy()
+
+# %%
+# Prints for TRAIN dataset
+print(f"Total {train.shape} Columns and Rows in the Train Dataset")
+# Shape is stored as a 2D Array; [0] is each line (row) and [1] is each item (col)
+print(f"Total {train.shape[0]} Rows in the Train Dataset")
+print(f"Total {train.shape[1]} Columns in the Train Dataset \n")
+
+# Prints for TEST dataset
+print(f"Total {test.shape} (Rows, Col) in TEST Dataset")
+
+# %%
+# Data is a copy of TRAIN
+data.head() # .head() is from pandas; it views the first few rows
+
+# %%
+# .info() provides info about the dataframe (what the chart is about)
+# entries - non-null = nulls (clear this up later)
+data.info()
+
+# %%
+# Prints basic stats
+data.describe(include='all').T
+
+# %% [markdown]
+# | Desc | Stats | Result |
+# | ------|------| -----|
+# | ApplicantIncome | mean 5403, std 6109 | Large range of income |
+# | CoapplicantIncome | mean 1621, std 2926 | Large range of income
+# | LoanAmount | mean 146, std 85 | Large range of loan amounts (in $)
+# | Loan_Amount_Term | mean 342, std 65 | about 342 months or 28.5 years (in months)
+# | Credit_History (binary variable; 1 has credit, 0 has none) | mean 0.84, std 0.36 | Most have a credit history
+
+# %% [markdown]
+# ### Univariate Analysis
+
+# %%
+# Use seaborn to make different graphs
+# Args: dataset, column/info, plot type with a default set, colors, size
+def plot_data(data, column, plot_type='count', palette=['#4285F4', '#E37400'], figsize=(10,6)):
+    fig, ax = plt.subplots(figsize=figsize)
+    # Shows quantity for each, it's a bar graph
+    if plot_type == 'count':
+        sns.countplot(x=column, data=data, ax=ax, palette=palette)
+        ax.set_title(f"Count Plot of {column}", size=15)
+        ax.set_xlabel(column, size=12, weight='bold')
+        ax.set_ylabel("Count", size=12, weight='bold')
+        total = len(data[column])
+        for p in ax.patches:
+            height = p.get_height()
+            pct = 100 * height / total
+            ax.annotate(f'{pct:.1f}%', (p.get_x()+0.3, height+5), fontsize=12)
+    # Shows data points spread on categorical axis (to find clusters or outliers)
+    elif plot_type == 'swarm':
+        sns.swarmplot(y=column, data=data, ax=ax, palette=palette)
+        ax.set_title(f"Swarm Plot of {column}", size=15)
+        ax.set_xlabel(column, size=12, weight='bold')
+        ax.set_ylabel("Value", size=12, weight='bold')
+    # Like a bar graph but smooth (shows frequency per value)
+    elif plot_type == 'dist':
+        sns.histplot(data=data, x=column, ax=ax, kde=True, palette=palette)
+        ax.set_title(f"Distribution Plot of {column}", size=15)
+        ax.set_xlabel(column, size=12, weight='bold')
+        ax.set_ylabel("Frequency", size=12, weight='bold')
+    # Bar graph but each bar split into sections
+    elif plot_type == 'stacked':
+        groupby_df = data.groupby(column)['Loan_Status'].value_counts(normalize=True).unstack()
+        groupby_df.plot(kind='bar', stacked=True, ax=ax, color=palette)
+        ax.set_title(f"Stacked Bar Plot of {column}", size=15, weight='bold')
+        ax.set_xlabel(column, size=12, weight='bold')
+        ax.set_ylabel("Proportion", size=12, weight='bold')
+        ax.legend(title="Loan Status", loc='upper right')
+        for i in range(groupby_df.shape[0]):
+            for j in range(groupby_df.shape[1]):
+                pct = groupby_df.iloc[i, j] * 100
+                ax.annotate(f"{pct:.1f}%", xy=(i, groupby_df.iloc[i, :j].sum() + pct/2),
+                            ha='center', va='center', color='white', weight='bold')
+    else:
+        print(f"Invalid plot type: {plot_type}")
+    
+    plt.show()
+
+# %%
+plot_data(data, 'Loan_Status', plot_type='count')
+
+# %%
+# Gender frequency
+gender_counts = data['Gender'].value_counts()
+color_pie = ['#4285F4', '#E37400']
+# Pie Plot
+names = ['Male', 'Female']
+fig, ax = plt.subplots(figsize=(12,8))
+ax.pie(gender_counts, labels=names, autopct='%.1f%%', colors=color_pie,
+       wedgeprops={'linewidth': 3.0, 'edgecolor': '#FFFFFF'},
+       textprops={'size': 'medium', 'color':'#000000', 'weight':'bold'})
+ax.set_title('Distribution of Gender', fontsize=14)
+plt.show()
+
+# %%
+plot_data(data, 'Married', plot_type='count')
+
+# %%
+plot_data(data, 'Education', plot_type='count')
+
+# %%
+plot_data(data, 'Self_Employed', plot_type='count')
+
+# %%
+plot_data(data, 'Property_Area', plot_type='count')
+
+# %%
+plot_data(data, 'ApplicantIncome', plot_type='swarm')
+
+# %% [markdown]
+# - It is skewed to most having incomes from 0 to 20,000
+# - Outliers may be at 80,000
+
+# %%
+plot_data(data, 'CoapplicantIncome', plot_type='swarm')
+
+# %%
+plot_data(data, 'LoanAmount', plot_type='dist')
+
+# %% [markdown]
+# - Right skewed, most people are getting smaller loans, but a few get large loans
+
+# %%
+plot_data(data, 'Credit_History', plot_type='count')
+
+# %%
+plot_data(data, 'Loan_Amount_Term', plot_type='count')
+
+# %% [markdown]
+# **Univariate Analysis (highlights the issue of missing values)**
+# - Loan_Amount_Term had 14 missing values
+# - Credit_History has a lot of missing values too
+# - Outliers seem to be in all cases that skew the data
+
+# %% [markdown]
+# ### Cleaning Up Missing Values
+
+# %%
+# Impute (assigns a value) from mean, median or mode for missing values
+print('NUMBER OF MISSING VALUES IN THE DATASET: \n')
+display(train.isnull().sum().sort_values(ascending=False))
+print("------------------------")
+
+
+train_rows, train_cols = train.shape[0], train.shape[1]
+# All cells
+train_cells = (train_rows * train_cols)
+# Add within category, then add by category
+train_missing = train.isnull().sum().sum()
+
+print(f"% of Missing Values: {round((train_missing / train_cells) * 100, 3)}%")
+
+# %%
+# Imputer => Use mean for LoanAmount and Loan_Amount_Term
+imputer = SimpleImputer(strategy='mean')
+data[['LoanAmount', 'Loan_Amount_Term']] = imputer.fit_transform(data[['LoanAmount', 'Loan_Amount_Term']])
+
+# Imputer => Use mode for Credit_History, Self_Employed, Dependents, Gender, Married
+imputer = SimpleImputer(strategy='most_frequent')
+data[['Credit_History', 'Self_Employed', 'Dependents', 'Gender', 'Married']] = imputer.fit_transform(data[['Credit_History', 'Self_Employed', 'Dependents', 'Gender', 'Married']])
+
+# %% [markdown]
+# ### Clearing Up Outliers
+# - Using distribution plot (for the curve)
+# - And boxplot like in STAT 2507 to see the common outliers outisde of the Q1 and Q3 quartiles
+
+# %%
+# List of the categories with outliers
+col_outliers = ["LoanAmount","ApplicantIncome","Loan_Amount_Term","CoapplicantIncome"]
+
+# Creates a histogram and box plot
+def plot_hist_box(data, column):
+    fig, (ax1, ax2) = plt.subplots(ncols=2, figsize=(15, 4))
+    sns.histplot(data=data, x=column, bins=20, kde=True, ax=ax1, color='#4285F4')
+    sns.boxplot(data=data, x=column, ax=ax2, color='#E37400')
+    ax1.set_title(f"Histogram and Box Plot of {column}", size=15, weight='bold')
+    ax1.set_xlabel(column, size=12, weight='bold')
+    ax1.set_ylabel("Frequency", size=12, weight='bold')
+    ax2.set_xlabel(column, size=12, weight='bold')
+    ax2.set_ylabel("Value", size=12, weight='bold')
+    plt.show()
+
+# Iterates through the above list and makes graphs for each
+for col in col_outliers:
+    plot_hist_box(data, col)
+
+# %%
+# Removes outliers based on box plot
+def remove_outliers(data, columns, k=1.5):
+    for col in columns:
+        q1 = data[col].quantile(0.25)
+        q3 = data[col].quantile(0.75)
+        iqr = q3 - q1
+        lower = q1 - k * iqr
+        upper = q3 + k * iqr
+        # Filters DataFrame (keeps only those the range: lower < keep < upper)
+        data = data[(data[col] >= lower) & (data[col] <= upper)]
+    return data
+
+# Runs and checks it
+columns = ['LoanAmount', 'ApplicantIncome', 'Loan_Amount_Term', 'CoapplicantIncome']
+data = remove_outliers(data, columns) # Overwrites the data with the outlier-free one
+data.info()
+
+# %% [markdown]
+# ### Bivariate Analysis
+# - Analyzing relationships between two variables
+
+# %%
+# Stacked Bar graph
+gender_loan = data.groupby(['Gender', 'Loan_Status']).size().unstack()
+colors=['#4285F4', '#E37400']
+gender_loan.plot(kind='bar', stacked=True, color=colors, figsize=(10,6))
+plt.title('Loan Approval based on Gender', fontsize=15, fontweight='bold', color='black')
+plt.xlabel('Gender', fontsize=12, fontweight='bold', color='black')
+plt.ylabel('Count', fontsize=12, fontweight='bold', color='black')
+plt.show()
+
+# %% [markdown]
+# - \# of Male Applicants > # of Female Applicants
+# - About the same approval rate
+
+# %%
+# Kernel Density Estimate (KDE) Plot
+plt.figure(figsize=(10,6))
+sns.kdeplot(data.loc[data['Loan_Status']=='Y', 'LoanAmount'], label='Approved', fill='1', color='#4285F4')
+sns.kdeplot(data.loc[data['Loan_Status']=='N', 'LoanAmount'], label='Not Approved', fill='1', color='#E37400')
+plt.title('Loan Approval based on Loan Amount and Loan Status', fontsize=15, fontweight='bold', color='black')
+plt.xlabel('Loan Amount', fontsize=12, fontweight='bold', color='black')
+plt.ylabel('Density', fontsize=12, fontweight='bold', color='black')
+plt.legend(title='Loan Status', loc='upper right', fontsize=12)
+plt.show()
+
+# %% [markdown]
+# - At around LoanAmount 250, it shows how people who apply for larger loans has a slightly higher density of approvals
+
+# %%
+plt.figure(figsize=(10, 6))
+sns.countplot(data=data, x='Property_Area', hue='Loan_Status', palette=colors)
+plt.title('Loan Status by Property Area', fontsize=15, fontweight='bold')
+plt.xlabel('Property Area', fontsize=12, fontweight='bold')
+plt.ylabel('Count', fontsize=12, fontweight='bold')
+plt.show()
+
+# %% [markdown]
+# - Living in a semiurban location seems to have a higher loan_status but also more people applying
+# - Applying from rural has the highest chance of rejection
+# - Could speculate location can correlate to income
+
+# %% [markdown]
+# - Urban and SemiUrban tend to have greater amounts of people making around the 3000 range with greater hikes of people from Rural making 6000
+
+# %%
+# Approval based on marriage
+gender_loan = data.groupby(['Married', 'Loan_Status']).size().unstack()
+gender_loan.plot(kind='bar', stacked=True, color=colors, figsize=(10,6))
+plt.title('Loan Approval based on Married', fontsize=15, fontweight='bold', color='black')
+plt.xlabel('Married', fontsize=12, fontweight='bold', color='black')
+plt.ylabel('Count', fontsize=12, fontweight='bold', color='black')
+plt.show()
+
+# %% [markdown]
+# - Being married slightly increases your chances
+
+# %%
+# Loan approval based on education
+plt.figure(figsize=(10, 6))
+sns.countplot(data=data, x='Education', hue='Loan_Status', palette=colors)
+plt.title('Loan Status by Education', fontsize=15, fontweight='bold')
+plt.xlabel('Education', fontsize=12, fontweight='bold')
+plt.ylabel('Count', fontsize=12, fontweight='bold')
+plt.show()
+
+# %% [markdown]
+# - Overall more people applying who graduated, and have a significantly better approval rate
+
+# %%
+# Loan approval based on employment
+gender_loan = data.groupby(['Self_Employed', 'Loan_Status']).size().unstack()
+gender_loan.plot(kind='bar', stacked=True, color=colors, figsize=(10,6))
+plt.title('Loan Approval based on Employment', fontsize=15, fontweight='bold', color='black')
+plt.xlabel('Self_Employed?', fontsize=12, fontweight='bold', color='black')
+plt.ylabel('Count', fontsize=12, fontweight='bold', color='black')
+plt.show()
+
+# %% [markdown]
+# - The non-self employed have more approvals
+
+# %%
+# 
+plt.figure(figsize=(10, 6))
+sns.violinplot(data=data, x='Loan_Status', y='ApplicantIncome', hue='Loan_Status', palette=colors)
+plt.title('Applicant Income vs Loan Status', fontsize=15, fontweight='bold')
+plt.xlabel('Loan Status', fontsize=12, fontweight='bold')
+plt.ylabel('Applicant Income', fontsize=12, fontweight='bold')
+plt.legend(title='Loan Status', fontsize=12, title_fontsize=12)
+plt.show()
+
+# %% [markdown]
+# - Violin Plot: Mix of boxplot and KDE plot to highlight distribution, central tendency and variability of the data
+# - Shows distribution of approved loans are wider
+# - 
+
+# %%
+plt.figure(figsize=(10, 6))
+sns.boxplot(data=data, x='Loan_Status', y='CoapplicantIncome', palette=colors)
+plt.title('Co-Applicant Income vs Loan Status', fontsize=15, fontweight='bold')
+plt.xlabel('Loan Status', fontsize=12, fontweight='bold')
+plt.ylabel('Co-Applicant Income', fontsize=12, fontweight='bold')
+plt.show()
+
+# %% [markdown]
+# - Median coapplicant income was higher for approved vs rejected
+# - Range is wider for approved coapplicants too
+# - Distribution of approved coapplicant income is slightly right skewed
+
+# %% [markdown]
+# ### Hypothesis Testing (5 Questions)
+
+# %% [markdown]
+# Question 1: Does the applicant's gender have an impact on loan approval rates?
+# - H_0: Applicant gender has no significance on loan approval rates
+# - H_A: Applicant gender has significant on loan approval rates
+# - a = 0.05 (if p <= a, reject H_0 and assume H_A)
+
+# %%
+# Approach
+# - Use Contingency Table: Displays frequency distribution
+# - Use Chi-Squared Test of Indepndence: Checks if two variables have significant association 
+# (results change if two variables were independent)
+
+# Contingency table of Gender to Loan_Status
+contingency_table = pd.crosstab(data['Gender'], data['Loan_Status'])
+print(contingency_table)
+
+# Chi-Square Test: 2D array (contingency table) is checked for frequencies deviating from expect frequencies under H_0 of indepedence
+chi2_stat, p_val, dof, expected = chi2_contingency(contingency_table)
+
+# Results
+print('P-value: ', p_val)
+if p_val <= 0.05:
+    print('We reject the null hypothesis.')
+else:
+    print('We fail to reject the null hypothesis.')
+
+# %% [markdown]
+# Q1 Result
+# - Since p = 0.368 and p < a, we fail to reject the null hypothesis where gender does not have significance on loan approval rates
+
+# %% [markdown]
+# Question 2: Is there a significant difference in loan approval rates between married and unmarried individuals?
+# - H_0: Being married or unmarried has no significance on loan approval rates
+# - H_A: Being married or unmarried has significance on loan approval rates
+
+# %%
+# Contingency table of Gender to Loan_Status
+contingency_table = pd.crosstab(data['Married'], data['Loan_Status'])
+print(contingency_table)
+
+# Chi-Square Test: 2D array (contingency table) is checked for frequencies deviating from expect frequencies under H_0 of indepedence
+chi2_stat, p_val, dof, expected = chi2_contingency(contingency_table)
+
+# Results
+print('P-value: ', p_val)
+if p_val <= 0.05:
+    print('We reject the null hypothesis.')
+else:
+    print('We fail to reject the null hypothesis.')
+
+# %% [markdown]
+# Q2 Results
+# - We fail to reject H0, not enough evidence to show marriage has significance on loan approval rates
+
+# %% [markdown]
+# Question 3: Does the applicant's education level have an impact on loan approval rates?
+# - H_0: Education level has no significance on loan approval rates
+# - H_A: Education level has significance on loan approval rates
+
+# %%
+# Contingency table
+cont_table = pd.crosstab(data['Loan_Status'], data['Education'], margins=True)
+
+# Chi-squared test
+chi2, pval, dof, expected = chi2_contingency(cont_table)
+
+# Chi-square statistic: Quantifies how far observed data deviates from expected (if independent)
+# ^ high num means big discrepancy, low num means small discrepancy
+# P-value: Probabability that H_0 is true (smaller p-value means stronger evidence agaisnt H_0)
+# Degrees of Freedom: Shows number of independent inputs (it's like num of ticks)
+# Expected Frequencies: Expected if variables were independent
+
+print(f'Chi-squared statistic: {chi2}\nP-value: {pval}\nDegrees of freedom: {dof}\nExpected frequencies:\n{expected}')
+
+# P-value results
+if p_val < 0.05:
+    print('We reject the null hypothesis.')
+else:
+    print('We fail to reject the null hypothesis.')
+
+# %% [markdown]
+# Q3 Results:
+# - Since p = 0.550 and p > a, we fail to reject H_0
+# - We cannot conclude educational leve has significnace on loan approval rates
+
+# %% [markdown]
+# Question 4: Is there a significant difference in loan approval rates between self-employed and salaried individuals?
+# - H_0: Being self-Employed or salaried individuals has no significance on loan approval rates
+# - H_A: Being self-Employed or salaried individuals has significance on loan approval rates
+# - Uses a two-t test since we have two independent groups
+
+# %%
+# Contingency table
+cont_table = pd.crosstab(data['Self_Employed'], data['Loan_Status'])
+
+# Chi-squared
+chi2, pval, dof, expected = chi2_contingency(cont_table)
+
+# Results
+print(f"Chi-squared statistic: {chi2}")
+print(f"P-value: {pval}")
+print(f"Degrees of freedom: {dof}")
+
+if p_val < 0.05:
+    print('We reject the null hypothesis.')
+else:
+    print('We fail to reject the null hypothesis.')
+
+# %% [markdown]
+# Q4 Results:
+# - Since p = 1.0 and p > a, we fail to reject the H_0
+# - Being self-employed or salaried has no significance on loan approval rates
+
+# %% [markdown]
+# Q5: Does the loan amount have a significant impact on loan approval?
+# - H_0: Loan amount has no significance on loan approval
+# - H_A: Loan amount has significance on loan approval
+# - Use logistic regression analysis to analyze relationship between binary dependent variable and an independent variable: Classifies data into one of two possible outcomes (yes or no of the binary dependant variable)
+
+# %%
+# Binary outcome variable
+data_loan = data.copy()
+data_loan['loan_approved'] = data_loan['Loan_Status'].map({'Y': 1, 'N': 0})
+
+# Logistic regression model
+X = data_loan[['LoanAmount']]
+y = data_loan['loan_approved']
+X = sm.add_constant(X)
+model = sm.Logit(y, X).fit()
+
+# Results
+print(model.summary())
+
+# %% [markdown]
+# Q5 Results: 
+# - Since p = 0.751, and p > a, we fail to reject H_0
+# - The loan amount has no signifncance on loan approval rate
+# - Pseudo R-Squared value is low, meaning the model does not fit well with the data
+
+# %% [markdown]
+# ### Multivariate Analysis
+# - To analyze relationship between multiple variables at the same time
+
+# %%
+plt.figure(figsize=(10, 6))
+sns.set_style('darkgrid')
+sns.set_context('talk')
+
+# Define colors
+colors = ['red', 'purple']
+
+# Creates scatterplot
+plot = sns.scatterplot(data=data, x='LoanAmount', y='ApplicantIncome', hue='Loan_Status', size='CoapplicantIncome', sizes=(100, 1000), alpha=0.8, palette=colors)
+
+# Set labels
+plot.set_title('Loan Eligibility based on Income to Amount', fontsize=15, fontweight='bold')
+plot.set_xlabel('Loan Amount', fontsize=12, fontweight='bold')
+plot.set_ylabel('Applicant Income', fontsize=12, fontweight='bold')
+
+# Sets legends
+legend = plot.legend(title='Loan Status', fontsize=8)
+legend.get_title().set_fontweight('bold')
+
+plt.show()
+
+# %%
+# Only use numeric columns
+numeric_cols = ['ApplicantIncome', 'CoapplicantIncome', 'LoanAmount', 'Loan_Amount_Term', 'Credit_History']
+
+# Make parallel coordinates plot
+fig = px.parallel_coordinates(data, color="LoanAmount", dimensions=numeric_cols)
+
+# Update layout
+fig.update_layout(
+    # title="Loan Eligibility",
+    title_font_size=15,
+    xaxis_title="Attributes",
+    yaxis_title="Values",
+    font=dict(size=12, color="black"),
+    legend_title="Loan Status",
+    legend_font_size=12,
+    legend_traceorder="reversed",
+    width=1000,
+    height=500
+)
+
+fig.show()
+
+# %% [markdown]
+# - We can see that loan amount and credit history are important variables
+
+# %%
+# 3D Scatter plot
+fig = px.scatter_3d(data, x='ApplicantIncome', y='CoapplicantIncome', z='LoanAmount', color='Loan_Status')
+fig.show()
+
+# %% [markdown]
+# - Loan amount is positively correlated with applicant income
+# - Income UP, loan amount UP
+
+# %% [markdown]
+# ### Model Prepration Stage
+# - Data Processing: Cleaning and transformain data
+# - Feature Selection: Choose which important features will be used for the model
+# - Splitting: Sectioning dataset into training and testing sets
+# - Then, train and refine a ML model
+
+# %%
+data.head()
+
+# %%
+le = LabelEncoder() # From sklearn, converts non-numerical items into numbers
+# Relabels to make everything all numbers
+for col in data.columns:
+    if data[col].dtype != np.number:
+        data[col] = le.fit_transform(data[col])
+
+# %%
+data.tail()
+
+# %%
+data.info()
+
+# %% [markdown]
+# ### Feature Selection
+
+# %%
+# Pulls Loan_Status off the dataframe
+X = data.drop('Loan_Status', axis=1)
+
+# Holds Loan_Status as our result that the model will try to predict x => y
+y = data['Loan_Status'] # Fetaure matrix
+
+# Split feature matrix 'x' and target variable 'y' into training and testing sets
+# Data split; 20% is testing, and 100-20 = 80% is for training
+X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42)
+
+# %% [markdown]
+# ### Data Modeling
+
+# %%
+# Defining the classifiers: Algorithm to determine the category of new data points based on past data
+# - LogisticRegression: For binary classification (e.g. email is spam or not spam)
+# - Support Vector Classifier (SVC) with RBF kernel: Classifies data that is not linearly seperable
+# - Decision Tree Classifier: Splits data into small groups based on feature values (literal tree diagram)
+# - Random Forest Classifier: Combines many decision trees to make a stronger model
+# - K-Nearest Neighbours (KNN): Classifies based on how the neighbours are classified (e.g. points near A will classify as A)
+
+classifiers = [
+    LogisticRegression(),
+    SVC(kernel="rbf", C=0.025, probability=True),
+    DecisionTreeClassifier(random_state = 40),
+    RandomForestClassifier(random_state = 40, n_estimators = 100),
+    KNeighborsClassifier(),
+]
+
+# %%
+results = []
+
+# Go through each classifier
+for classifier in classifiers:
+    # Trains using x_train and y_train, then tries to predict into y_pred
+    classifier.fit(X_train, y_train)
+    y_pred = classifier.predict(X_test)
+    
+    # Evaluation metrics
+    accuracy = accuracy_score(y_test, y_pred)
+    precision = precision_score(y_test, y_pred)
+    recall = recall_score(y_test, y_pred)
+    f1 = f1_score(y_test, y_pred)
+    
+    # Prepare results
+    results.append({
+        'Classifier': classifier.__class__.__name__,
+        'Accuracy': accuracy,
+        'Precision': precision,
+        'Recall': recall,
+        'F1': f1
+    })
+
+# Convert results list to pandas DataFrame
+df_results = pd.DataFrame(results)
+
+# Display results DataFrame
+print(df_results)
+
+# %% [markdown]
+# - Logistic Regression, Decision Tree Classifier, and Random Forest Classifier are the top 3 most accurate
+# - These can be improved with tuning
+
+# %%
+data.Loan_Status.value_counts()
+
+# %% [markdown]
+# ### Data Imbalance
+# - In the previous step we see 310 approvals and 123 rejections
+# - This imbalance causes our model to know more examples of approvals and can lead to bias
+# - Solution: Use oversampling by ADASYN (Adaptive Synthetic Sampling); make artificial examples of the minority class to balance the data
+
+# %%
+# Setup Resampling algorithms
+# - SMOTE: Synthetic Minority Over Samplying Technique: Estimates between minority samples and neighbours
+# - ADASYN: Adaptive Synthetic Technique: Like SMOTE but focused on minority samples based on density of majority class neighbours
+smote = SMOTE()
+adasyn = ADASYN()
+
+# Resample data with SMOTE
+X_smote, y_smote = smote.fit_resample(X, y)
+
+# Resample data with ADASYN
+X_adasyn, y_adasyn = adasyn.fit_resample(X, y)
+
+# %%
+# We can see that both approvals and rejections are balanced
+print('Before Sampling:', y.value_counts())
+print('-------------------')
+print('After Sampling:', y_smote.value_counts())
+
+# %%
+# Check classifiers after fixing data imbalance with SMOTE
+results_smote = []
+
+for classifier in classifiers:
+    # Train and predict using ADASYN resampled data
+    classifier.fit(X_smote, y_smote)
+    y_pred_smote = classifier.predict(X_test)
+    
+    # Compute evaluation metrics
+    accuracy_smote = accuracy_score(y_test, y_pred_smote)
+    precision_smote = precision_score(y_test, y_pred_smote)
+    recall_smote = recall_score(y_test, y_pred_smote)
+    f1_smote = f1_score(y_test, y_pred_smote)
+    
+    # Add results to list
+    results_smote.append({
+        'Classifier': classifier.__class__.__name__,
+        'Accuracy': accuracy_smote,
+        'Precision': precision_smote,
+        'Recall': recall_smote,
+        'F1': f1_smote
+    })
+
+# Convert results list to pandas DataFrame
+df_results_smote = pd.DataFrame(results_smote)
+
+# Display results DataFrame
+print(df_results_smote)
+
+# %%
+# Check classifiers after fixing data imbalance with ADASYN
+results_adasyn = []
+
+for classifier in classifiers:
+    # Train and predict using ADASYN resampled data
+    classifier.fit(X_adasyn, y_adasyn)
+    y_pred_adasyn = classifier.predict(X_test)
+    
+    # Compute evaluation metrics
+    accuracy_adasyn = accuracy_score(y_test, y_pred_adasyn)
+    precision_adasyn = precision_score(y_test, y_pred_adasyn)
+    recall_adasyn = recall_score(y_test, y_pred_adasyn)
+    f1_adasyn = f1_score(y_test, y_pred_adasyn)
+    
+    # Add results to list
+    results_adasyn.append({
+        'Classifier': classifier.__class__.__name__,
+        'Accuracy': accuracy_adasyn,
+        'Precision': precision_adasyn,
+        'Recall': recall_adasyn,
+        'F1': f1_adasyn
+    })
+
+# Convert results list to pandas DataFrame
+df_results_adasyn = pd.DataFrame(results_adasyn)
+
+# Display results DataFrame
+print(df_results_adasyn)
+
+# %% [markdown]
+# - SMOTE: Oversampling improved models classify approvals and rejections correctly (especially on DTC and RFC)
+# - ADASYN: DTC and RFC again is improved the predictions
+
+# %% [markdown]
+# ### Feature Importance
+# - We pick relevant features that seem to have the biggest weights on the outcome
+# - Reduces dimensionality => Reduces features that aren't needed
+# - Prevents overfitting => Overfitting is when it performs good on known training data but poorly on fresh data
+
+# %%
+# Building a model with Extra Trees Classifier
+# - ExtraTreesClassifier: Gives score for each feature (higher score means important feature)
+model = ExtraTreesClassifier()
+model.fit(X, y)
+
+importance = model.feature_importances_
+for i, v in enumerate (importance):
+    print('Feature: %0d, Score: %.5f' % (i,v))
+
+# Plot it
+plt.figure(figsize=(10, 6))
+plt.bar([x for x in range(len(importance))], importance)
+plt.show()
+
+# %% [markdown]
+# - No Importance: 9-CoapplicantIncome
+# - Low Importance (low score): 1-Married, 2-Dependents, 3-Education, 4-SelfEmployed, 5-ApplicantIncome
+# - High Importance: 0-Gender, Education, CreditHistory
+
+# %%
+# Building a model with RecursiveFeatureElimanation
+# - RFE: Removes least important featrures to pick the top ones
+model = LogisticRegression()
+rfe = RFE(model, n_features_to_select=3) # select top 3 features
+fit = rfe.fit(X, y)
+
+# Print selected features
+print("Selected Features: ", X.columns[fit.support_])
+
+# Plot feature importance
+plt.figure(figsize=(10, 6))
+plt.bar(range(len(rfe.ranking_)), rfe.ranking_)
+plt.show()
+
+
+# %% [markdown]
+# - Married, Education, and Credit History seem to be highly important
+
+# %%
+# Building a model with SelectKBest with chi2 scoring function
+# - SelectKBest: Picks top K features based on the chi2 scoring functino
+# - chi2 Scoring Function: Measures dependence between features and target variables
+# In this case, chi2 checks dataset's importance to outcome set
+selector = SelectKBest(f_classif, k=3)
+
+# Fit the selector on the training set
+X_train_selected = selector.fit_transform(X_train, y_train)
+
+# Print the selected features
+print("Selected Features: ", X_train.columns[selector.get_support()])
+
+# Plot the scores of all features
+plt.bar(range(len(selector.scores_)), selector.scores_)
+plt.show()
+
+# %% [markdown]
+# - Top 3: Credit History, Applicant Income, CoapplicantIncome
+
+# %% [markdown]
+# ### Conclusion
+# - Using Univariate, Bivariate, Hypothesis Testing, Multivariate Analysis, Data Processing, Label Encoding, Splittinh, Modelling, data Imbalance, Feature Importance it has come to the conclusion that the models were able to find Credit History and Education to be highly important
+
+
