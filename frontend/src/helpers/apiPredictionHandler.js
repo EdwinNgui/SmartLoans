@@ -1,6 +1,6 @@
 // Function to make API call to Flask backend
 export async function getPrediction(data) {
-  const response = await fetch('http://localhost:5000/predict', {
+  const response = await fetch('http://localhost:5000/api/predict', {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',

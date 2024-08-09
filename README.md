@@ -6,4 +6,4 @@
 ## Backend Startup Commands
 - venv\Scripts\activate # Activates venv for dependencies
 - deactivate # When done with venv
-- python modelAPI.py # Starts server
+- python app.py # Starts server
