@@ -21,8 +21,8 @@ const Navbar = () => {
   }, [isOpen]);
 
   return (
-    <div className="relative">
-      <div className="flex items-center py-4 border-b-2 border-[#594ff0] sticky top-0 z-50 bg-[#ffffff]">
+    <div className="sticky top-0 relative z-50">
+      <div className="flex items-center py-4 border-b-2 border-[#594ff0] sticky top-0 bg-[#ffffff]">
         <div className="container mx-auto px-4 sm:px-6 md:px-8 lg:px-0 flex justify-between items-center">
           <Link href="/">
             <h1 className="text-2xl sm:text-3xl text-[#594ff0] font-extrabold">SmartLoans</h1>

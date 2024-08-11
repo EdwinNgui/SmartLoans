@@ -11,7 +11,7 @@ const Home = () => {
         <div className='flex-1 mb-8 md:mb-0 px-8 md:pr-12'>
           <h1 className="text-3xl md:text-4xl font-extrabold mb-4 md:mb-6">Welcome to SmartLoans</h1>
           <p className="text-base md:text-lg mb-4 md:mb-6">
-            Unlock your financial potential with SmartLoans! Our state-of-the-art algorithm simplifies loan eligibility predictions, helping you make informed financial decisions.
+            Unlock your financial potential with SmartLoans! Our state-of-the-art algorithm simplifies <strong>loan eligibility predictions</strong>, helping you make informed financial decisions.
           </p>
           <p className="text-base md:text-lg mb-4 md:mb-6">
             Whether you're looking to buy a home, start a business, or consolidate debt, our tool offers accurate insights into your loan eligibility based on your financial profile.

@@ -11,7 +11,7 @@ rfe_model = joblib.load('notebooks/loan_eligibility_model.pkl')
 
 # Define mappings for categorical columns
 mappings = {
-    'Gender': {'Male': 1, 'Female': 0},
+    'Gender': {'Male': 1, 'Female': 0, 'Other': 1}, # In other, leave it within the Male field to improve the success (in multivariate analysis gender played a small role)
     'Married': {'Yes': 1, 'No': 0},
     'Dependents': {'0': 0, '1': 1, '2': 2, '3+': 3},
     'Education': {'Graduate': 1, 'Not Graduate': 0},
