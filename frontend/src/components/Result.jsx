@@ -13,6 +13,7 @@ const Result = ({ prediction }) => {
         </div>
       )}
       
+      {prediction !== null && (
       <div className={`mt-8 p-4 text-white rounded-md text-center bg-[#594ff0]`}>
         {prediction === 1 ? (
             <div className="">
@@ -38,6 +39,7 @@ const Result = ({ prediction }) => {
             </div>
           )}
       </div>
+      )}
     </div>
   );
 };
