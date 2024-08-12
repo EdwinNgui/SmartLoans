@@ -42,7 +42,7 @@ const Predict = () => {
   return (
     <>
       <Login />
-      <div className="flex justify-center items-center min-h-screen bg-gradient-to-br from-blue-50 to-gray-100 p-6">
+      <div className="flex justify-center items-center min-h-screen bg-gradient-to-br from-blue-50 to-gray-100 p-6 py-12">
         <div className="w-full max-w-lg bg-white shadow-lg rounded-lg p-8">
           <h2 className="text-3xl font-bold text-gray-800 mb-8 text-center">Loan Eligibility Prediction</h2>
           <form onSubmit={handleSubmit} className="space-y-6">

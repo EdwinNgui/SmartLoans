@@ -25,19 +25,19 @@ const Navbar = () => {
       <div className="flex items-center py-4 border-b-2 border-[#594ff0] sticky top-0 bg-[#ffffff]">
         <div className="container mx-auto px-4 sm:px-6 md:px-8 lg:px-0 flex justify-between items-center">
           <Link href="/">
-            <h1 className="text-2xl sm:text-3xl text-[#594ff0] font-extrabold">SmartLoans</h1>
+            <h1 className="text-2xl sm:text-3xl text-[#594ff0] font-extrabold lg:hover:text-[#1c1463] transition duration-300">SmartLoans</h1>
           </Link>
           <nav className="hidden md:flex items-center space-x-4">
-            <Link href="/" className="text-[#1c1463] hover:underline text-base sm:text-lg">Home</Link>
+            <Link href="/" className="text-[#1c1463] hover:underline text-base sm:text-lg transition duration-300">Home</Link>
             <a 
               href="https://github.com/EdwinNgui/Loan-Eligibility-Prediction" 
               target="_blank" 
               rel="noopener noreferrer" 
-              className="text-[#1c1463] hover:underline text-base sm:text-lg"
+              className="text-[#1c1463] hover:underline text-base sm:text-lg transition duration-300"
             >
               Documentation
             </a>
-            <Link href="/predict" className="text-[#ffffff] bg-[#594ff0] hover:bg-[#1c1463] px-4 py-2 rounded-3xl font-extrabold">
+            <Link href="/predict" className="text-[#ffffff] bg-[#594ff0] hover:bg-[#1c1463] px-4 py-2 rounded-3xl font-extrabold transition duration-300">
               Predict Now
             </Link>
           </nav>
@@ -56,7 +56,7 @@ const Navbar = () => {
       {isOpen && (
         <>
         <div className="fixed inset-0 bg-black opacity-50 z-40" onClick={toggleMenu}></div>
-        <div className="fixed top-0 left-0 w-full h-full bg-[#ffffff] flex flex-col items-start p-6 z-50 pl-8">
+        <div className="fixed top-0 left-0 w-full h-full bg-[#ffffff] flex flex-col items-start p-6 z-50 md:pl-20 pl-12">
           
           <div className="flex justify-between items-center w-full mb-6">
             <div></div> {/* This empty div will push the button to the right */}
