@@ -31,9 +31,8 @@ const Home = () => {
           <Image 
             src={LoanImage} // Use the imported image
             alt="Loan Eligibility"
-            layout="fill"
-            objectFit="cover"
-            className="absolute inset-0"
+            fill
+            className="absolute inset-0 object-cover"
           />
         </div>
       </div>
