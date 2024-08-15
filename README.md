@@ -66,5 +66,5 @@ This Jupyter notebook guides you through a complete loan eligibility analysis, f
 
 ## **Acknowledgements**
 
-- **Guide Credit:** This project’s Jupyter notebook was heavily inspired by and built upon the concepts learned from the following guide: [Mastering Loan Eligibility Analysis - Advance EDA by Talha Bukhari](https://www.kaggle.com/code/talhabu/mastering-loan-eligibility-analysis-advance-eda?scriptVersionId=126121065). The guide was instrumental in helping me understand exploratory data analysis and training a machine learning model.
+- **Guide Credit:** This project’s Jupyter notebook was heavily inspired by and built upon the concepts learned from the following guide: [Mastering Loan Eligibility Analysis - Advance EDA by Abu Talha](https://www.kaggle.com/code/talhabu/mastering-loan-eligibility-analysis-advance-eda?scriptVersionId=126121065). The guide was instrumental in helping me understand exploratory data analysis and training a machine learning model.
 - Special thanks to the Kaggle community for providing valuable resources and datasets.
