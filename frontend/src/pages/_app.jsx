@@ -10,7 +10,7 @@ function App({ Component, pageProps }) {
     <React.StrictMode>
       <Head>
         <link rel="icon" href="/FaviconLogo.ico" />
-        <title>SmartLoans | Loan Prediction Service</title>       
+        <title>SmartLoans | Loan Prediction</title>       
       </Head>
       <Layout>
         <Component {...pageProps} />

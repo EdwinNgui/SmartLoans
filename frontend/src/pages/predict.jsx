@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { getPrediction } from '../helpers/apiPredictionHandler'; // Import the API helper function
 import Results from "../components/Result"
+import { GridLoader } from "react-spinners";
 
 const Predict = () => {
   const [inputData, setInputData] = useState({
@@ -19,6 +20,7 @@ const Predict = () => {
   });
   const [prediction, setPrediction] = useState(null);
   const [error, setError] = useState(null);
+  const [isLoading, setIsLoading] = useState(false);
 
   const handleChange = (e) => {
     const { name, value } = e.target;
@@ -30,11 +32,15 @@ const Predict = () => {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+    setIsLoading(true);
+
     try {
       const result = await getPrediction(inputData); // Call API helper function
       setPrediction(result.prediction); // Extract and set prediction result
     } catch (err) {
       setError('Error fetching prediction');
+    } finally {
+      setIsLoading(false); //Stop loading spinner
     }
   };
 
@@ -219,6 +225,16 @@ const Predict = () => {
               Predict
             </button>
           </form>
+
+          {/* Spinner that activates when form is submitted and LOADING only */}
+          {isLoading && (
+            <div className='flex flex-col justify-center items-center mt-8'>
+              <GridLoader color="#594ff0" />
+              <div className='mt-2 text-[#dad9db]'>
+                Please wait up to one minute...
+              </div>
+            </div>
+          )}
 
           {/* Results with the prediction result passed */}
           <Results prediction={prediction} />
