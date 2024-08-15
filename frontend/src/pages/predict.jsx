@@ -231,7 +231,7 @@ const Predict = () => {
             <div className='flex flex-col justify-center items-center mt-8'>
               <GridLoader color="#594ff0" />
               <div className='mt-2 text-[#6e6e6e]'>
-                Please wait up to one minute...
+                Please wait up to one minute while the server boots back up (using a free service)...
               </div>
             </div>
           )}
