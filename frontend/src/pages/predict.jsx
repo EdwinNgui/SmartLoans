@@ -230,7 +230,7 @@ const Predict = () => {
           {isLoading && (
             <div className='flex flex-col justify-center items-center mt-8'>
               <GridLoader color="#594ff0" />
-              <div className='mt-2 text-[#dad9db]'>
+              <div className='mt-2 text-[#6e6e6e]'>
                 Please wait up to one minute...
               </div>
             </div>
